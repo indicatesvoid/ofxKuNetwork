@@ -67,7 +67,7 @@ private:
 		k+=4;
 		memcpy( &src32, data + k, 4 );
 		k+=4;
-		return ( frame >= 0 && size >= 0 && size < 10000000 && src32 >= 0 );	//TODO Parameter "10000000" 
+		return ( frame >= 0 && size >= 0 && size < 10000000 && src32 >= 0 );	//TODO Parameter "10000000"
 	}
 };
 
@@ -115,7 +115,7 @@ void ofxKuNetworkTcpClient::reconnect()
 	if (!enabled_) return;
 	cout << "Reconnect sender " << _addr << ", port " << _port << endl;
 	bool blocking = true;
-	_connected = tcpClient.setup( _addr, _port, blocking);		
+	_connected = tcpClient.setup( _addr, _port, blocking);
 	_connectTime = ofGetElapsedTimef();
 	if ( _connected ) { cout << " ok" << endl; }
 	else { cout << " failed" << endl; }
@@ -126,11 +126,11 @@ void ofxKuNetworkTcpClient::update()
 {
 	if (!enabled_) return;
 	//Reconnecting
-	if ( !connected() ) {			
+	if ( !connected() ) {
 		float deltaTime = ofGetElapsedTimef() - _connectTime;
 		if( deltaTime > 1.0f ) {			//TODO Parameter - reconnecting time
 			reconnect();
-		} 
+		}
 	}
 }
 
@@ -138,7 +138,7 @@ void ofxKuNetworkTcpClient::update()
 bool ofxKuNetworkTcpClient::send( unsigned char *data, int size, int frameNumber )
 {
 	if (!enabled_) return false;
-	update();	
+	update();
 	bool res = connected();
 	//Header
 	if ( res ) {
@@ -169,7 +169,7 @@ bool ofxKuNetworkTcpClient::send( unsigned char *data, int size, int frameNumber
 //-------------------------------------------------------------------
 //if true - collect data to buffer if even enabled=false
 //false by default
-void ofxKuNetworkTcpClient::setDataPushMode(bool d) {		
+void ofxKuNetworkTcpClient::setDataPushMode(bool d) {
 	dataPushMode_ = d;
 }
 
@@ -234,11 +234,16 @@ void ofxKuNetworkTcpClient::putU8Vector(const vector<unsigned char> &v) {
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putPixels(const ofPixels &pix) {
+void ofxKuNetworkTcpClient::putPixels(const ofPixels &pix, int _locationId, int _cameraId) {
 	if (!dataPushing()) return;
+
+	putInt(_locationId);
+	putInt(_cameraId);
+
 	putInt(pix.getWidth());
 	putInt(pix.getHeight());
 	putInt(pix.getNumChannels());
+
 	int n = pix.getWidth() * pix.getHeight() * pix.getNumChannels(); //getTotalBytes();
 
 	//as putting vector<unsigned char>
@@ -272,7 +277,7 @@ ofxKuNetworkTcpServer::~ofxKuNetworkTcpServer() {
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpServer::setup( int port, int packetSize, bool threaded, int maxBufferSize, bool enabled )		
+void ofxKuNetworkTcpServer::setup( int port, int packetSize, bool threaded, int maxBufferSize, bool enabled )
 {
 	enabled_ = enabled;
 	dataParsingMode_ = false;
@@ -285,7 +290,7 @@ void ofxKuNetworkTcpServer::setup( int port, int packetSize, bool threaded, int 
 	_frame = -1;
 	_size = 0;
 
-	maxN = maxBufferSize; //1000000;		
+	maxN = maxBufferSize; //1000000;
 	_buffer.resize( maxN );
 	_N = 0;
 
@@ -297,7 +302,7 @@ void ofxKuNetworkTcpServer::setup( int port, int packetSize, bool threaded, int 
 		startTCP();
 
 		if ( _threaded ) {
-			startThread( true, false );   //blocking, verbose
+			startThread( true );   //blocking, verbose
 		}
 	}
 }
@@ -309,7 +314,7 @@ void ofxKuNetworkTcpServer::setupForParsingBuffer(vector<unsigned char> &buffer,
 
 	_size = (size==-1)?buffer.size():size;
 
-	maxN = _size;		
+	maxN = _size;
 	_N = 0;
 
 	bufferSize_ = _size;
@@ -332,7 +337,7 @@ void ofxKuNetworkTcpServer::startTCP()
 	bool blocking = true;
 	TCP.setup(_port, blocking);
 	int timeoutReceiveSec = 1;
-	TCP.TCPServerRef().SetTimeoutReceive( timeoutReceiveSec );	
+	TCP.TCPServerRef().SetTimeoutReceive( timeoutReceiveSec );
 }
 
 //-------------------------------------------------------------------
@@ -346,7 +351,7 @@ void ofxKuNetworkTcpServer::close()
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpServer::restart()	
+void ofxKuNetworkTcpServer::restart()
 {
 	if (!enabled_) return;
 	_wantRestart = true;
@@ -364,7 +369,7 @@ void ofxKuNetworkTcpServer::threadedFunction()
 		if ( _wantRestart ) {
 			_wantRestart = false;
 			for(int k = 0; k < TCP.getNumClients(); k++){
-				if ( TCP.isClientConnected(k) ) { 
+				if ( TCP.isClientConnected(k) ) {
 					disconnectClient( k );
 				}
 			}
@@ -402,16 +407,16 @@ void ofxKuNetworkTcpServer::receive0()
 	if (!enabled_) return;
 	char *buffer = &_buffer[0];
 	for(int k = 0; k < TCP.getNumClients(); k++){
-		if ( !TCP.isClientConnected(k) ) { 
+		if ( !TCP.isClientConnected(k) ) {
 			continue;
 		}
 
 		int free = maxN - _N;
 		if ( free > 0 ) {
 			free = min( free, _packetSize );
-			int rec = TCP.receiveRawBytes( k, (char *)(buffer + _N), free ); 
+			int rec = TCP.receiveRawBytes( k, (char *)(buffer + _N), free );
 			if ( rec >= 0 ) {
-				_N += rec;		
+				_N += rec;
 				//cout << "rec " << rec << endl;
 				//Searching header
 				ofxKuNetwork_PacketHeader header;
@@ -419,7 +424,7 @@ void ofxKuNetworkTcpServer::receive0()
 				if ( headerPos >= 0 ) {
 
 					//cout << "reading frame " << header.frame << endl;
-					
+
 					//Header is found, now receive data
 
 					int headerEnd = headerPos + ofxKuNetwork_PacketHeaderSize;
@@ -432,7 +437,7 @@ void ofxKuNetworkTcpServer::receive0()
 
 					float lastTime = ofGetElapsedTimef();	//Time of last successfull receiving
 					while ( _N < size ) {
-						rec = TCP.receiveRawBytes( k, (char *)(buffer + _N), free ); 
+						rec = TCP.receiveRawBytes( k, (char *)(buffer + _N), free );
 						if ( rec > 0 ) {
 							_N += rec;
 							lastTime = ofGetElapsedTimef();
@@ -467,7 +472,7 @@ void ofxKuNetworkTcpServer::receive0()
 				cout << "Network: Receive error - no data" << endl;
 				disconnectClient( k );
 				_N = 0;						//Reset read data
-				return;						
+				return;
 			}
 		}
 	}
@@ -492,7 +497,7 @@ bool ofxKuNetworkTcpServer::isDataNew() {
 	if (result) {
 		//copy buffer for reading
 		//TODO current implementation is unsafe, need use mutex, because thread can overwrite _size and _data during copy!
-		bufferIndex_ = 0;		
+		bufferIndex_ = 0;
 		bufferSize_ = _size;
 		buffer_.resize(bufferSize_);
 		for (int i = 0; i < bufferSize_; i++) {
@@ -573,9 +578,14 @@ bool ofxKuNetworkTcpServer::getU8Vector(vector<unsigned char> &v) {
 }
 
 //-------------------------------------------------------------------
-ofPixels ofxKuNetworkTcpServer::getPixels() {
-	ofPixels pix;
+KuNetworkPixels ofxKuNetworkTcpServer::getPixelsWithInfo() {
+    KuNetworkPixels pix;
+    
+//    ofPixels pix;
 	if (!parsing()) return pix;
+
+	int locationId = getInt();
+	int cameraId = getInt();
 
 	int w = getInt();
 	int h = getInt();
@@ -583,11 +593,17 @@ ofPixels ofxKuNetworkTcpServer::getPixels() {
 	vector<unsigned char> data;
 	if (getU8Vector(data)) {
 		if (data.size() == w*h*channels) {
-			pix.setFromPixels(&data[0], w, h, channels);	
+			pix.pixels.setFromPixels(&data[0], w, h, channels);
 		}
 	}
 
 	return pix;
+}
+
+//-------------------------------------------------------------------
+ofPixels ofxKuNetworkTcpServer::getPixels() {
+	KuNetworkPixels _networkPixels = this->getPixelsWithInfo();
+	return _networkPixels.pixels;
 }
 
 //-------------------------------------------------------------------
