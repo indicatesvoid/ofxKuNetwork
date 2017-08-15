@@ -179,86 +179,128 @@ bool ofxKuNetworkTcpClient::dataPushing() {
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::clearBuffer() {
+void ofxKuNetworkTcpClient::clearBuffer(std::uint8_t idx) {
 	if (!dataPushing()) return;
-	buffer_.clear();
+    if(idx < 0 || idx > buffers_.size()) return;
+    
+	buffers_[idx].clear();
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putU8Array(const unsigned char *v, int n) {
-	if (!dataPushing()) return;
-	int m = buffer_.size();
-	buffer_.resize(m + n);
-	for (int i = 0; i < n; i++) {
-		buffer_[m + i] = v[i];
-	}
+void ofxKuNetworkTcpClient::clearBuffers() {
+    if (!dataPushing()) return;
+    
+    for(auto _buffer : buffers_) {
+        _buffer.clear();
+    }
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putInt(int value) {
+void ofxKuNetworkTcpClient::putU8Array(const unsigned char *v, int n, std::uint8_t bufIdx) {
 	if (!dataPushing()) return;
-	putU8Array((unsigned char*)&value, sizeof(value));
+    if(bufIdx < 0 || bufIdx > buffers_.size()) return;
+    
+    KuBuffer_t* _buf = &buffers_[bufIdx];
+    
+    int m = _buf->size();
+    _buf->resize(m + n);
+    for (int i = 0; i < n; i++) {
+        &_buf[m + i] = v[i];
+    }
+    
+//	int m = buffer_.size();
+//	buffer_.resize(m + n);
+//	for (int i = 0; i < n; i++) {
+//		buffer_[m + i] = v[i];
+//	}
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putFloat(float value) {
+void ofxKuNetworkTcpClient::putInt(int value, std::uint8_t bufIdx) {
 	if (!dataPushing()) return;
-	putU8Array((unsigned char*)&value, sizeof(value));
+    if(bufIdx < 0 || bufIdx > buffers_.size()) return;
+    
+	putU8Array((unsigned char*)&value, sizeof(value), bufIdx);
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putIntVector(const vector<int> &v) {
+void ofxKuNetworkTcpClient::putFloat(float value, std::uint8_t bufIdx) {
+	if (!dataPushing()) return;
+	putU8Array((unsigned char*)&value, sizeof(value), bufIdx);
+}
+
+//-------------------------------------------------------------------
+void ofxKuNetworkTcpClient::putIntVector(const vector<int> &v, std::uint8_t bufIdx) {
 	if (!dataPushing()) return;
 	if (v.size() > 0) {
-		putInt(v.size() * sizeof(v[0]));
-		putU8Array((unsigned char*)&v[0], sizeof(v[0])*v.size());
+		putInt(v.size() * sizeof(v[0]), bufIdx);
+		putU8Array((unsigned char*)&v[0], sizeof(v[0])*v.size(), bufIdx);
 	}
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putFloatVector(const vector<float> &v) {
+void ofxKuNetworkTcpClient::putFloatVector(const vector<float> &v, std::uint8_t bufIdx) {
 	if (!dataPushing()) return;
 	if (v.size() > 0) {
-		putInt(v.size() * sizeof(v[0]));
-		putU8Array((unsigned char*)&v[0], sizeof(v[0])*v.size());
+		putInt(v.size() * sizeof(v[0]), bufIdx);
+		putU8Array((unsigned char*)&v[0], sizeof(v[0])*v.size(), bufIdx);
 	}
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putU8Vector(const vector<unsigned char> &v) {
+void ofxKuNetworkTcpClient::putU8Vector(const vector<unsigned char> &v, std::uint8_t bufIdx) {
 	if (!dataPushing()) return;
 	if (v.size() > 0) {
-		putInt(v.size() * sizeof(v[0]));
-		putU8Array((unsigned char*)&v[0], sizeof(v[0])*v.size());
+		putInt(v.size() * sizeof(v[0]), bufIdx);
+		putU8Array((unsigned char*)&v[0], sizeof(v[0])*v.size(), bufIdx);
 	}
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putPixels(const ofPixels &pix, int _locationId, int _cameraId) {
+void ofxKuNetworkTcpClient::putPixels(const ofPixels &pix, int _cameraId) {
 	if (!dataPushing()) return;
+    
+    // lazily use _cameraId as buffer idx //
 
-	putInt(_locationId);
-	putInt(_cameraId);
+//	putInt(_locationId);
+	putInt(_cameraId, _cameraId);
 
-	putInt(pix.getWidth());
-	putInt(pix.getHeight());
-	putInt(pix.getNumChannels());
+	putInt(pix.getWidth(), _cameraId);
+	putInt(pix.getHeight(), _cameraId);
+	putInt(pix.getNumChannels(), _cameraId);
 
 	int n = pix.getWidth() * pix.getHeight() * pix.getNumChannels(); //getTotalBytes();
 
 	//as putting vector<unsigned char>
-	putInt(n);
-	putU8Array(pix.getPixels(), n);
+	putInt(n, _cameraId);
+	putU8Array(pix.getPixels(), n, _cameraId);
 }
 
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::send() {
+void ofxKuNetworkTcpClient::send(std::uint8_t bufIdx) {
 	if (!dataPushing()) return;
-	if (buffer_.size() > 0) {
-		send(&buffer_[0], buffer_.size(), frameNumber_++);
-		buffer_.clear();
-	}
+    if(bufIdx < 0 || bufIdx > buffers_.size()) return;
+    
+//	if (buffer_.size() > 0) {
+//		send(&buffer_[0], buffer_.size(), frameNumber_++);
+//		buffer_.clear();
+//	}
+    
+    KuBuffer_t* _buf = &buffers_[bufIdx];
+    
+    if (_buf->size() > 0) {
+        send(_buf, _buf->size(), frameNumber_++);
+        _buf->clear();
+    }
+    
+//    for(size_t i = 0; i < buffers_.size(); i++) {
+//        std::vector<unsigned char> buffer_ = buffers_[i];
+//        if (buffer_.size() > 0) {
+//            send(&buffer_[0], buffer_.size(), frameNumber_++);
+//            buffer_.clear();
+//        }
+//    }
 }
 
 //-------------------------------------------------------------------

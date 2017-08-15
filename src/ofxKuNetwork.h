@@ -4,6 +4,9 @@
 #include "ofxNetwork_ku.h"
 #include "ofxKuNetworkTypes.h"
 
+// types //
+typedef std::vector<unsigned char> KuBuffer_t;
+
 //Synchronous data sender
 class ofxKuNetworkTcpClient
 {
@@ -20,23 +23,32 @@ public:
 	bool dataPushMode() { return dataPushMode_; }
 	int frameNumber() { return frameNumber_; }
 
-	int bufferSize() { return buffer_.size(); }
-	vector<unsigned char> &buffer() { return buffer_; }
-	void clearBuffer();
-	void putU8Array(const unsigned char *v, int n);
-	void putInt(int value);
-	void putFloat(float value);
-	void putIntVector(const vector<int> &v);
-	void putFloatVector(const vector<float> &v);
-	void putU8Vector(const vector<unsigned char> &v);
-	void putPixels(const ofPixels &pix, int _locationId = -1, int _cameraId = -1);
-	void send();
+    // buffer helper methods have been rewritten
+    // to accomodate for multiple buffers
+	int bufferSize(std::uint8_t idx = 0) { return buffers_[idx].size(); }
+	vector<unsigned char> &buffer(std::uint8_t idx = 0) { return buffers_[idx]; }
+    void clearBuffer(std::uint8_t idx = 0);
+    void clearBuffers();
+    
+    // TO-DO: rewrite put* method declarations/implementations
+    // to take in a buffer idx
+    void putU8Array(const unsigned char *v, int n, std::uint8_t bufIdx = 0);
+	void putInt(int value, std::uint8_t bufIdx = 0);
+	void putFloat(float value, std::uint8_t bufIdx = 0);
+	void putIntVector(const vector<int> &v, std::uint8_t bufIdx = 0);
+	void putFloatVector(const vector<float> &v, std::uint8_t bufIdx = 0);
+	void putU8Vector(const vector<unsigned char> &v, std::uint8_t bufIdx = 0);
+	void putPixels(const ofPixels &pix, int _cameraId = 0);
+    
+    void send(std::uint8_t bufIdx = 0);
+    void sendAll();
 
 	bool send( unsigned char *data, int dataSize, int frameNumber );
 	void update();
 
 
 private:
+
 	bool enabled_;
 	bool dataPushMode_;
 	bool dataPushing();
@@ -49,8 +61,9 @@ private:
 	bool _connected;
 	float _connectTime;
 	void reconnect();
-
-	vector<unsigned char> buffer_;	//buffer for sending
+    
+//    std::vector<unsigned char> buffer_;	//buffer for sending
+    std::vector<std::vector<unsigned char>> buffers_;	//buffer for sending
 	int frameNumber_;
 };
 
