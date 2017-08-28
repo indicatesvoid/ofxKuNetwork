@@ -234,11 +234,11 @@ void ofxKuNetworkTcpClient::putU8Vector(const vector<unsigned char> &v) {
 }
 
 //-------------------------------------------------------------------
-void ofxKuNetworkTcpClient::putPixels(const ofPixels &pix, int _locationId, int _cameraId) {
+void ofxKuNetworkTcpClient::putPixels(const ofPixels &pix) {
 	if (!dataPushing()) return;
 
-	putInt(_locationId);
-	putInt(_cameraId);
+//	putInt(_locationId);
+//	putInt(_cameraId);
 
 	putInt(pix.getWidth());
 	putInt(pix.getHeight());
@@ -580,12 +580,12 @@ bool ofxKuNetworkTcpServer::getU8Vector(vector<unsigned char> &v) {
 //-------------------------------------------------------------------
 KuNetworkPixels ofxKuNetworkTcpServer::getPixelsWithInfo() {
     KuNetworkPixels pix;
-    
+
 //    ofPixels pix;
 	if (!parsing()) return pix;
 
-	int locationId = getInt();
-	int cameraId = getInt();
+//	int locationId = getInt();
+//	int cameraId = getInt();
 
 	int w = getInt();
 	int h = getInt();
@@ -602,8 +602,23 @@ KuNetworkPixels ofxKuNetworkTcpServer::getPixelsWithInfo() {
 
 //-------------------------------------------------------------------
 ofPixels ofxKuNetworkTcpServer::getPixels() {
-	KuNetworkPixels _networkPixels = this->getPixelsWithInfo();
-	return _networkPixels.pixels;
+//	KuNetworkPixels _networkPixels = this->getPixelsWithInfo();
+//	return _networkPixels.pixels;
+    
+    ofPixels pix;
+    if (!parsing()) return pix;
+    
+    int w = getInt();
+    int h = getInt();
+    int channels = getInt();
+    vector<unsigned char> data;
+    if (getU8Vector(data)) {
+        if (data.size() == w*h*channels) {
+            pix.setFromPixels(&data[0], w, h, channels);
+        }
+    }
+    
+    return pix;
 }
 
 //-------------------------------------------------------------------

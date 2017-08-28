@@ -29,7 +29,7 @@ public:
 	void putIntVector(const vector<int> &v);
 	void putFloatVector(const vector<float> &v);
 	void putU8Vector(const vector<unsigned char> &v);
-	void putPixels(const ofPixels &pix, int _locationId = -1, int _cameraId = -1);
+	void putPixels(const ofPixels &pix);
 	void send();
 
 	bool send( unsigned char *data, int dataSize, int frameNumber );
